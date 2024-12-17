@@ -8,20 +8,20 @@ import { isDefined, isFunction, isObject } from './value-utils';
 type OptionGroups = Map<string | NgOption, NgOption[]>;
 
 export class ItemsList {
-	private _groups: OptionGroups;
+	private _groups: OptionGroups; // Grouped map
 
 	constructor(
 		private _ngSelect: NgSelectComponent,
-		private _selectionModel: SelectionModel,
+		private _selectionModel: SelectionModel, // Handle selected array
 	) {}
 
-	private _items: NgOption[] = [];
+	private _items: NgOption[] = []; // Items array
 
 	get items(): NgOption[] {
 		return this._items;
 	}
 
-	private _filteredItems: NgOption[] = [];
+	private _filteredItems: NgOption[] = []; // Available items array
 
 	get filteredItems(): NgOption[] {
 		return this._filteredItems;
@@ -49,6 +49,7 @@ export class ItemsList {
 		return this._ngSelect.multiple && this._ngSelect.maxSelectedItems <= this.selectedItems.length;
 	}
 
+	// Return the last active item from selected array
 	get lastSelectedItem() {
 		let i = this.selectedItems.length - 1;
 		for (; i >= 0; i--) {
@@ -60,8 +61,11 @@ export class ItemsList {
 		return null;
 	}
 
+	// convert item array into compatible NgOption array
 	setItems(items: readonly any[]) {
+		// Handle normal items logic, convert into NgOption array
 		this._items = items.map((item, index) => this.mapItem(item, index));
+		// Handle additional groupBy logic(parent and children properties)
 		if (this._ngSelect.groupBy) {
 			this._groups = this._groupBy(this._items, this._ngSelect.groupBy);
 			this._items = this._flatten(this._groups);
@@ -118,7 +122,9 @@ export class ItemsList {
 	}
 
 	clearSelected(keepDisabled = false) {
+		// Clear selected from model
 		this._selectionModel.clear(keepDisabled);
+		// Handle selected status for items
 		this._items.forEach((item) => {
 			item.selected = keepDisabled && item.selected && item.disabled;
 			item.marked = false;
@@ -210,6 +216,8 @@ export class ItemsList {
 		}
 	}
 
+	// Returns the value of the property at the specified key.
+	// Handle nested properties, e.g. foo.bar.baz.
 	resolveNested(option: any, key: string): any {
 		if (!isObject(option)) {
 			return option;
@@ -229,6 +237,7 @@ export class ItemsList {
 		}
 	}
 
+	// Maps an item to an ng-option.
 	mapItem(item: any, index: number): NgOption {
 		const label = isDefined(item.$ngOptionLabel) ? item.$ngOptionLabel : this.resolveNested(item, this._ngSelect.bindLabel);
 		const value = isDefined(item.$ngOptionValue) ? item.$ngOptionValue : item;
@@ -324,6 +333,7 @@ export class ItemsList {
 		return Math.max(this.markedIndex, selectedIndex);
 	}
 
+	// Convert NgOption array into  grouped map
 	private _groupBy(items: NgOption[], prop: string | ((value: any) => any)): OptionGroups {
 		const groups = new Map<string | NgOption, NgOption[]>();
 		if (items.length === 0) {
@@ -341,6 +351,7 @@ export class ItemsList {
 
 		const isFnKey = isFunction(this._ngSelect.groupBy);
 		const keyFn = (item: NgOption) => {
+			// If prop is function, retrieve grouping key from function.
 			const key = isFnKey ? (<(value: any) => any>prop)(item.value) : item.value[<string>prop];
 			return isDefined(key) ? key : undefined;
 		};
@@ -358,6 +369,7 @@ export class ItemsList {
 		return groups;
 	}
 
+	// Convert grouped items back to NgOption(with parent and children properties set) array
 	private _flatten(groups: OptionGroups) {
 		const isGroupByFn = isFunction(this._ngSelect.groupBy);
 		const items = [];
@@ -390,6 +402,10 @@ export class ItemsList {
 					if (isObjectKey) {
 						return (<NgOption>key).value;
 					}
+					// Creates an object with the group key
+					// The key becomes a property of a new object
+					// If groupKey is 'department' and key is 'Sales'
+					// Result: { department: 'Sales' }
 					return { [groupKey]: key };
 				});
 			const children = groups.get(key).map((x) => {

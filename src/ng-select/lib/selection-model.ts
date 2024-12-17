@@ -21,21 +21,33 @@ export class DefaultSelectionModel implements SelectionModel {
 	}
 
 	select(item: NgOption, multiple: boolean, groupAsModel: boolean) {
+		// Set passing item as selected
 		item.selected = true;
+		// Push selected item into selected array：
+		// 1.Item without children
+		// 2. Single select with group as model
 		if (!item.children || (!multiple && groupAsModel)) {
 			this._selected.push(item);
 		}
 		if (multiple) {
+			// If parent item should be set as selected
 			if (item.parent) {
 				const childrenCount = item.parent.children.length;
 				const selectedCount = item.parent.children.filter((x) => x.selected).length;
 				item.parent.selected = childrenCount === selectedCount;
+				// If passing item has children
 			} else if (item.children) {
+				// Set all active children as selected
 				this._setChildrenSelectedState(item.children, true);
+				// Remove all active children from selected array
 				this._removeChildren(item);
 				if (groupAsModel && this._activeChildren(item)) {
+					// If group as model is enabled and all children are active
+					// Remove all children from selected array
+					// Push group as a item into selected array
 					this._selected = [...this._selected.filter((x) => x.parent !== item), item];
 				} else {
+					// Push all active children into selected array
 					this._selected = [...this._selected, ...item.children.filter((x) => !x.disabled)];
 				}
 			}
@@ -63,6 +75,7 @@ export class DefaultSelectionModel implements SelectionModel {
 		this._selected = keepDisabled ? this._selected.filter((x) => x.disabled) : [];
 	}
 
+	// Update all active children selected state
 	private _setChildrenSelectedState(children: NgOption[], selected: boolean) {
 		for (const child of children) {
 			if (child.disabled) {
@@ -72,6 +85,7 @@ export class DefaultSelectionModel implements SelectionModel {
 		}
 	}
 
+	// Remove all active children(selected as true) from selected array
 	private _removeChildren(parent: NgOption) {
 		this._selected = [
 			...this._selected.filter((x) => x.parent !== parent),
@@ -79,10 +93,14 @@ export class DefaultSelectionModel implements SelectionModel {
 		];
 	}
 
+	// Remove passing item from selected array
 	private _removeParent(parent: NgOption) {
 		this._selected = this._selected.filter((x) => x !== parent);
 	}
 
+	// Check if all children are either:
+	// 1.Active, OR
+	// 2.Selected.
 	private _activeChildren(item: NgOption): boolean {
 		return item.children.every((x) => !x.disabled || x.selected);
 	}

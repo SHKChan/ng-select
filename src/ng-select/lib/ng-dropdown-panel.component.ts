@@ -30,10 +30,10 @@ const CSS_POSITIONS: Readonly<string[]> = ['top', 'right', 'bottom', 'left'];
 const SCROLL_SCHEDULER = typeof requestAnimationFrame !== 'undefined' ? animationFrameScheduler : asapScheduler;
 
 @Component({
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    encapsulation: ViewEncapsulation.None,
-    selector: 'ng-dropdown-panel',
-    template: `
+	changeDetection: ChangeDetectionStrategy.OnPush,
+	encapsulation: ViewEncapsulation.None,
+	selector: 'ng-dropdown-panel',
+	template: `
 		@if (headerTemplate) {
 			<div class="ng-dropdown-header">
 				<ng-container [ngTemplateOutlet]="headerTemplate" [ngTemplateOutletContext]="{ searchTerm: filterValue }" />
@@ -51,7 +51,7 @@ const SCROLL_SCHEDULER = typeof requestAnimationFrame !== 'undefined' ? animatio
 			</div>
 		}
 	`,
-    imports: [NgTemplateOutlet]
+	imports: [NgTemplateOutlet],
 })
 export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 	@Input() items: NgOption[] = [];
@@ -78,17 +78,17 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 	private _virtualPadding: HTMLElement;
 	private _scrollablePanel: HTMLElement;
 	private _contentPanel: HTMLElement;
-	private _select: HTMLElement;
-	private _parent: HTMLElement;
+	private _select: HTMLElement; // the ng select element containing this panel
+	private _parent: HTMLElement; // the element that this panel append to
 	private _scrollToEndFired = false;
 	private _updateScrollHeight = false;
 	private _lastScrollPosition = 0;
 
 	constructor(
-		private _renderer: Renderer2,
-		private _zone: NgZone,
+		private _renderer: Renderer2, // Class provided by Angular to safely interact with the DOM
+		private _zone: NgZone, // Service provided by Angular for managing change detection. Angular uses zones to keep track of asynchronous operations and trigger change detection
 		private _panelService: NgDropdownPanelService,
-		_elementRef: ElementRef,
+		_elementRef: ElementRef, // Wrapper around the DOM element that this component is associated with
 		@Optional() @Inject(DOCUMENT) private _document: any,
 	) {
 		this._dropdown = _elementRef.nativeElement;
@@ -116,7 +116,7 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 	private get _startOffset() {
 		if (this.markedItem) {
 			const { itemHeight, panelHeight } = this._panelService.dimensions;
-			const offset = this.markedItem.index * itemHeight;
+			const offset = this.markedItem.index * itemHeight; // the vertical position of the marked item relative to the top of the panel
 			return panelHeight > offset ? 0 : offset;
 		}
 		return 0;
@@ -211,14 +211,23 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 	}
 
 	private _handleScroll() {
+		// Scroll logic executed outside Angular’s change detection to improve performance
 		this._zone.runOutsideAngular(() => {
+			// Creates an observable from a DOM event, it listens for the scroll event
 			fromEvent(this.scrollElementRef.nativeElement, 'scroll')
+				// - takeUntil: ensures that the observable stops emitting events when the _destroy$ observable emits to avoid memory leaks
+				// - auditTime: reduces the frequency of event processing to improve performance
 				.pipe(takeUntil(this._destroy$), auditTime(0, SCROLL_SCHEDULER))
+				// - e:scroll event object
+				// - path: an array of elements that are part of the event's event path
+				// - composedPath: a function that returns an array of elements through which the event has bubbled
+				// - target: the target element where the scroll event occurred
 				.subscribe((e: { path; composedPath; target }) => {
 					const path = e.path || (e.composedPath && e.composedPath());
 					if (!path || (path.length === 0 && !e.target)) {
 						return;
 					}
+					// determines the vertical scroll position (scrollTop) of the scrollable element.
 					const scrollTop = !path || path.length === 0 ? e.target.scrollTop : path[0].scrollTop;
 					this._onContentScrolled(scrollTop);
 				});
@@ -300,6 +309,7 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 		this._fireScrollToEnd(scrollTop);
 	}
 
+	// Update the height of the scrolling area in the DOM by modifying the height style property
 	private _updateVirtualHeight(height: number) {
 		if (this._updateScrollHeight) {
 			this._virtualPadding.style.height = `${height}px`;
@@ -327,6 +337,7 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 		scrollTop = scrollTop || this._scrollablePanel.scrollTop;
 		const range = this._panelService.calculateItems(scrollTop, this.itemsLength, this.bufferAmount);
 		this._updateVirtualHeight(range.scrollHeight);
+		// Apply a vertical transformation to the content element in the DOM, to move the entire list in the vertical direction
 		this._contentPanel.style.transform = `translateY(${range.topPadding}px)`;
 
 		this._zone.run(() => {
@@ -359,6 +370,7 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 		});
 	}
 
+	// Detect when the user has scrolled to the end of a scrollable content area and fire the scrollToEnd event
 	private _fireScrollToEnd(scrollTop: number) {
 		if (this._scrollToEndFired || scrollTop === 0) {
 			return;
@@ -367,6 +379,8 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 		const padding = this.virtualScroll ? this._virtualPadding : this._contentPanel;
 
 		if (scrollTop + this._dropdown.clientHeight >= padding.clientHeight - 1) {
+			// Run the code inside Angular’s change detection zone
+			// Ensures that any updates inside this block trigger Angular's change detection cycle
 			this._zone.run(() => this.scrollToEnd.emit());
 			this._scrollToEndFired = true;
 		}

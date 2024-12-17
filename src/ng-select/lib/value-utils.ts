@@ -8,6 +8,7 @@ const htmlEscapes = {
 	"'": '&#39;',
 };
 
+// Prevent cross-site scripting (XSS) attacks, convert HTML content to plain text
 export function escapeHTML(value: string) {
 	return value && hasUnescapedHTMLExp.test(value) ? value.replace(unescapedHTMLExp, (chr) => htmlEscapes[chr]) : value;
 }

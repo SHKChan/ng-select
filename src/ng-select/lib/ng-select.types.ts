@@ -3,11 +3,14 @@ export interface NgOption {
 
 	index?: number;
 	htmlId?: string;
+	// Option State
 	selected?: boolean;
 	disabled?: boolean;
 	marked?: boolean;
+	// Binding
 	label?: string;
 	value?: string | any;
+	// Group
 	parent?: NgOption;
 	children?: NgOption[];
 }
