@@ -89,7 +89,7 @@ export class NgDropdownPanelComponent implements OnInit, OnChanges, OnDestroy {
 		private _zone: NgZone, // Service provided by Angular for managing change detection. Angular uses zones to keep track of asynchronous operations and trigger change detection
 		private _panelService: NgDropdownPanelService,
 		_elementRef: ElementRef, // Wrapper around the DOM element that this component is associated with
-		@Optional() @Inject(DOCUMENT) private _document: any,
+		@Optional() @Inject(DOCUMENT) private _document: any, // Root of the DOM tree, represents the entire HTML
 	) {
 		this._dropdown = _elementRef.nativeElement;
 	}
